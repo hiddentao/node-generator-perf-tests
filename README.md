@@ -9,16 +9,16 @@ Some performance tests for using Generators in node.js. All tests require **node
 
 ### Generator delegation
 
-https://github.com/hiddentao/generator-performance-tests/blob/master/perf-delegated-generators.js
+https://github.com/hiddentao/generator-performance-tests/blob/master/perf-generator-delegation.js
 
 This tests the performance impact fro using the `yield *` operator.
 
 ```
 // Test ran on Macbook Air 2012 (2 GHz Intel Core i7 + 8GB 1600MHz DDR3 RAM + OS X 10.9 (13A603))
-Non-delegation x 683 ops/sec ±1.01% (24 runs sampled)
 
-Delegation x 665 ops/sec ±0.95% (21 runs sampled)
-Fastest is Non-delegation
+Without delegation x 649 ops/sec ±1.24% (37 runs sampled)
+With delegation x 625 ops/sec ±1.94% (20 runs sampled)
+Fastest is Without delegation
 ```
 
 Browser-version of this test available at http://jsperf.com/generator-delegation
@@ -34,8 +34,8 @@ This test tests bluebird's [`Promise.spawn`](https://github.com/petkaantonov/blu
 ```
 // Test ran on Macbook Air 2012 (2 GHz Intel Core i7 + 8GB 1600MHz DDR3 RAM + OS X 10.9 (13A603))
 
-Bluebird-Promise.spawn x 155 ops/sec ±0.84% (82 runs sampled)
-co x 156 ops/sec ±0.85% (83 runs sampled)
+Bluebird-Promise.spawn x 155 ops/sec ±0.86% (84 runs sampled)
+co x 156 ops/sec ±0.77% (83 runs sampled)
 Fastest is co,Bluebird-Promise.spawn
 ```
 
