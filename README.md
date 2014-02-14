@@ -14,14 +14,22 @@ https://github.com/hiddentao/generator-performance-tests/blob/master/perf-genera
 This tests the performance impact fro using the `yield *` operator.
 
 ```
-// Test ran on Macbook Air 2012 (2 GHz Intel Core i7 + 8GB 1600MHz DDR3 RAM + OS X 10.9 (13A603))
+// Test platform: Macbook Air 2012 (2 GHz Intel Core i7 + 8GB 1600MHz DDR3 RAM + OS X 10.9 (13A603)) + Node 0.11.10
 
 Without delegation x 649 ops/sec ±1.24% (37 runs sampled)
 With delegation x 625 ops/sec ±1.94% (20 runs sampled)
-Fastest is Without delegation
 ```
 
 Browser version of this test: http://jsperf.com/generator-delegation
+
+```
+// Test platform: Macbook Air 2012 (2 GHz Intel Core i7 + 8GB 1600MHz DDR3 RAM + OS X 10.9 (13A603)) + Firefox Nightly 30.0a1
+
+Without delegation x 119,272 ops/sec ±2.85%
+With delegation x 69,286 ops/sec ±5.17%
+```
+
+
 
 
 ### Bluebird vs co
@@ -32,13 +40,20 @@ This test tests bluebird's [`Promise.spawn`](https://github.com/petkaantonov/blu
 
 
 ```
-// Test ran on Macbook Air 2012 (2 GHz Intel Core i7 + 8GB 1600MHz DDR3 RAM + OS X 10.9 (13A603))
+// Test platform: Macbook Air 2012 (2 GHz Intel Core i7 + 8GB 1600MHz DDR3 RAM + OS X 10.9 (13A603)) + Node 0.11.10
 
 Bluebird-Promise.spawn x 155 ops/sec ±0.86% (84 runs sampled)
 co x 156 ops/sec ±0.77% (83 runs sampled)
-Fastest is co,Bluebird-Promise.spawn
 ```
 
 Browser version of this test: http://jsperf.com/generator-iteration-co-vs-bluebird
+
+```
+// Test platform: Macbook Air 2012 (2 GHz Intel Core i7 + 8GB 1600MHz DDR3 RAM + OS X 10.9 (13A603)) + Firefox Nightly 30.0a1
+
+Bluebird-Promise.spawn x 50.95 ops/sec ±0.46%
+co x 51.17 ops/sec ±0.54%
+```
+
 
 
