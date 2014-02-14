@@ -3,7 +3,7 @@ Some performance tests for using Generators in node.js. All tests require **node
 ## Usage
 
 1. `npm install`
-1. 'node --harmony <test file.js>'
+1. `node --harmony <test file.js>`
 
 ## Results
 
@@ -21,7 +21,7 @@ With delegation x 625 ops/sec ±1.94% (20 runs sampled)
 Fastest is Without delegation
 ```
 
-Browser-version of this test available at http://jsperf.com/generator-delegation
+Browser version of this test: http://jsperf.com/generator-delegation
 
 
 ### Bluebird vs co
@@ -38,5 +38,7 @@ Bluebird-Promise.spawn x 155 ops/sec ±0.86% (84 runs sampled)
 co x 156 ops/sec ±0.77% (83 runs sampled)
 Fastest is co,Bluebird-Promise.spawn
 ```
+
+Browser version of this test: http://jsperf.com/generator-iteration-co-vs-bluebird
 
 
