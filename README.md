@@ -17,8 +17,8 @@ This tests the performance impact fro using the `yield *` operator.
 // Macbook Air 2012 (2 GHz Intel Core i7 + 8GB 1600MHz DDR3 RAM + OS X 10.9 (13A603))
 // Node 0.11.10
 
-Without delegation x 649 ops/sec ±1.24% (37 runs sampled)
-With delegation x 625 ops/sec ±1.94% (20 runs sampled)
+Without delegation x 693 ops/sec ±0.98% (23 runs sampled)
+With delegation x 683 ops/sec ±1.23% (20 runs sampled)
 ```
 
 Browser version of this test: http://jsperf.com/generator-delegation

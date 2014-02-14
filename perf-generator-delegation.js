@@ -5,7 +5,7 @@ var Benchmark = require('benchmark'),
 
 // thunk
 var setTimeoutThunk = function(ms) {
-  return new function(cb){
+  return function(cb){
     setTimeout(cb, ms);
   };
 };
