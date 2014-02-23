@@ -18,6 +18,8 @@ var gen = function*() {
   yield setTimeoutPromise(1);
 };
 
+var bluebirdCoroutine = Promise.coroutine(gen);
+var coCoroutine = co(gen);
 
 
 
@@ -36,6 +38,22 @@ suite.add('Bluebird-Promise.spawn', {
   defer: true,
   fn: function(deferred) {
     co(gen)(function() {
+      deferred.resolve();
+    });
+  }
+})
+.add('Bluebird-Promise.coroutine (prepared)', {
+  defer: true,
+  fn: function(deferred) {
+    bluebirdCoroutine().then(function() {
+      deferred.resolve();
+    });
+  }
+})
+.add('co (prepared)', {
+  defer: true,
+  fn: function(deferred) {
+    coCoroutine(function() {
       deferred.resolve();
     });
   }
