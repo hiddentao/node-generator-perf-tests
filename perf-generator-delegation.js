@@ -2,9 +2,10 @@ var Benchmark = require('benchmark'),
   co = require('co'),
   Promise = require('bluebird');
 
+var tools = require('./tools');
 
-// thunk
-var setTimeoutThunk = function(ms) {
+
+setTimeoutThunk = function(ms) {
   return function(cb){
     setTimeout(cb, ms);
   };
@@ -12,8 +13,6 @@ var setTimeoutThunk = function(ms) {
 
 
 var delegated = function*() {
-  yield setTimeoutThunk(1);
-  yield setTimeoutThunk(1);
   yield setTimeoutThunk(1);
   yield setTimeoutThunk(1);
 };
@@ -30,27 +29,35 @@ var suite = new Benchmark.Suite;
 suite.add('Without delegation', {
   defer: true,
   fn: function(deferred) {
-    var gen = delegated(),
-      done = false;
+    tools.run(function(cb) {
+      var gen = delegated(),
+        done = false;
 
-    while (!done) {
-      done = gen.next().done;
-    }
+      while (!done) {
+        done = gen.next().done;
+      }
 
-    deferred.resolve();
+      cb();
+    }, function() {
+      deferred.resolve();
+    });
   }
 })
 .add('With delegation', {
   defer: true,
   fn: function(deferred) {
-    var gen = delegator(),
-      done = false;
+    tools.run(function(cb) {
+      var gen = delegator(),
+        done = false;
 
-    while (!done) {
-      done = gen.next().done;
-    }
+      while (!done) {
+        done = gen.next().done;
+      }
 
-    deferred.resolve();
+      cb();
+    }, function() {
+      deferred.resolve();
+    });
   }
 })
 .on('cycle', function(event) {

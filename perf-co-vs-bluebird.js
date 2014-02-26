@@ -2,9 +2,10 @@ var Benchmark = require('benchmark'),
   co = require('co'),
   Promise = require('bluebird');
 
+var tools = require('./tools');
 
-// thunk
-var setTimeoutPromise = function(ms) {
+
+setTimeoutPromise = function(ms) {
   return new Promise(function(resolve, reject){
     setTimeout(resolve, ms);
   });
@@ -14,22 +15,22 @@ var setTimeoutPromise = function(ms) {
 var gen = function*() {
   yield setTimeoutPromise(1);
   yield setTimeoutPromise(1);
-  yield setTimeoutPromise(1);
-  yield setTimeoutPromise(1);
 };
 
 var bluebirdCoroutine = Promise.coroutine(gen);
 var coCoroutine = co(gen);
 
 
-
 var suite = new Benchmark.Suite;
+
 
 // add tests
 suite.add('Bluebird-Promise.spawn', {
   defer: true,
   fn: function(deferred) {
-    Promise.spawn(gen).then(function() {
+    return tools.run(function(cb) {
+      Promise.spawn(gen).then(cb);
+    }, function() {
       deferred.resolve();
     });
   }
@@ -37,7 +38,9 @@ suite.add('Bluebird-Promise.spawn', {
 .add('co', {
   defer: true,
   fn: function(deferred) {
-    co(gen)(function() {
+    return tools.run(function(cb) {
+      co(gen)(cb);
+    }, function() {
       deferred.resolve();
     });
   }
@@ -45,7 +48,9 @@ suite.add('Bluebird-Promise.spawn', {
 .add('Bluebird-Promise.coroutine (prepared)', {
   defer: true,
   fn: function(deferred) {
-    bluebirdCoroutine().then(function() {
+    return tools.run(function(cb) {
+      bluebirdCoroutine().then(cb);
+    }, function() {
       deferred.resolve();
     });
   }
@@ -53,9 +58,12 @@ suite.add('Bluebird-Promise.spawn', {
 .add('co (prepared)', {
   defer: true,
   fn: function(deferred) {
-    coCoroutine(function() {
+    return tools.run(function(cb) {
+      coCoroutine(cb);
+    }, function() {
       deferred.resolve();
     });
+
   }
 })
 .on('cycle', function(event) {
@@ -65,3 +73,4 @@ suite.add('Bluebird-Promise.spawn', {
   console.log('Fastest is ' + this.filter('fastest').pluck('name'));
 })
 .run({ 'async': true });
+

@@ -9,7 +9,8 @@
     "benchmark": "~1.0.0",
     "microtime": "~0.5.1",
     "co": "~3.0.2",
-    "bluebird": "~1.0.4"
+    "bluebird": "~1.0.4",
+    "commander": "~2.1.0"
   },
   "devDependencies": {},
   "repository": {
