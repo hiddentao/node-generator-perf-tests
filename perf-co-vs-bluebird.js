@@ -1,5 +1,5 @@
 var Benchmark = require('benchmark'),
-  co = require('co'),
+  co = require('./gen6'),
   Promise = require('bluebird');
 
 var tools = require('./tools');
