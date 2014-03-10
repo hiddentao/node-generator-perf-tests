@@ -1,6 +1,6 @@
 ## Performance: Co speedup improvements
 
-This tests **co original** (= [co](https://github.com/visionmedia/co) v3.0.4) against **co speedup** (a refactor v3.0.4). **co speedup** attempts to use some of the VM-targeted performance optimisations found in [bluebird](https://github.com/petkaantonov/bluebird) to speed up co.
+This tests **co-original** (= [co](https://github.com/visionmedia/co) v3.0.4) against **co-speedup** (a refactor of v3.0.4). **co-speedup** attempts to use some of the VM-targeted performance optimisations found in [bluebird](https://github.com/petkaantonov/bluebird) to speed up co.
 
 * Promises
 
@@ -17,10 +17,9 @@ To run all tests
 
 All tests are run with a default concurrency factor of 10000 in order to stress the code and obtain useful results.
 
-
 ## Results
 
-TODO...
+COMING SOON...
 
 
 
