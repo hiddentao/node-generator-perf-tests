@@ -98,10 +98,38 @@ Coroutine.prototype.executePromise = function(promise) {
 
 
 Coroutine.prototype.executeGenerator = function(generator) {
-  new Coroutine(generator).run(thix.ctx, this.nextB, this.throwB);
+  new Coroutine(generator).run(this.ctx, this.nextB, this.throwB);
 }
 
 
+Coroutine.prototype.executeGeneratorFunction = function(generatorFunction) {
+  new Coroutine(generatorFunction.call(this.ctx)).run(this.ctx, this.nextB, this.throwB);
+}
+
+
+Coroutine.prototype.executeThunk = function(thunk) {
+  var self = this;
+
+  thunk.call(this.ctx, function(err) {
+    if (err) {
+      self.throw(err);
+    } else {
+      self.next.apply(self, slice.call(arguments, 1));
+    }
+  });
+}
+
+Coroutine.prototype.executeObject = function(obj) {
+  var self = this;
+
+  thunk.call(this.ctx, function(err) {
+    if (err) {
+      self.throw(err);
+    } else {
+      self.next.apply(self, slice.call(arguments, 1));
+    }
+  });
+}
 
 Coroutine.prototype.execute = function(value) {
   var self = this;
@@ -114,6 +142,21 @@ Coroutine.prototype.execute = function(value) {
 
     if (isGenerator(value)) {
       this.executeGenerator(value);
+      return;
+    }     
+
+    if (isGeneratorFunction(value)) {
+      this.executeGeneratorFunction(value);
+      return;
+    }     
+
+    if ('function' === typeof value) { /* assume it is a thunk */
+      this.executeThunk(value);
+      return;
+    }     
+
+    if ('object' === typeof value) { /* assume it is an array or object of yieldables */
+      this.executeObject(value);
       return;
     }     
 
@@ -141,32 +184,6 @@ Coroutine.prototype.continue = function(res) {
     self.success(res.value);
   } else {
     self.execute(res.value);
-
-    // // run
-    // if ('function' == typeof res.value) {
-    //   var called = false;
-    //   try {
-    //     res.value.call(this.ctx, function(err){
-    //       if (called) return;
-    //       called = true;
-    //       if (err) {
-    //         self.throw(err);
-    //       } else {
-    //         self.next.apply(self, slice.call(arguments, 1));            
-    //       }
-    //     });
-    //   } catch (e) {
-    //     setImmediate(function(){
-    //       if (called) return;
-    //       called = true;
-    //       self.throw(e);
-    //     });
-    //   }
-    //   return;
-    // }
-
-    // // invalid
-    // next(new Error('yield a function, promise, generator, array, or object'));
   }
 }
 
@@ -226,9 +243,9 @@ function toThunk(obj, ctx) {
   //   return objectToThunk.call(ctx, obj);
   // }
 
-  // if (isGeneratorFunction(obj)) {
-  //   return co(obj.call(ctx));
-  // }
+  if (isGeneratorFunction(obj)) {
+    return co(obj.call(ctx));
+  }
 
   if (isGenerator(obj)) {
     return co(obj);
@@ -238,9 +255,9 @@ function toThunk(obj, ctx) {
     return promiseToThunk(obj);
   }
 
-  // if ('function' == typeof obj) {
-  //   return obj;
-  // }
+  if ('function' == typeof obj) {
+    return obj;
+  }
 
   // if (obj && 'object' == typeof obj) {
   //   return objectToThunk.call(ctx, obj);

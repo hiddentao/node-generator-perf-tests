@@ -1,21 +1,15 @@
 Some performance tests for using Generators in node.js. All tests require **node v0.11.2 or above**.
 
-## Usage
+In each folder you will find README instructions for running the tests.
 
-1. `npm install`
-1. `node --harmony <test file.js>` -c <concurrency factor>
+## Changelog
 
-## Browser
+* 2014-03-10
+  * Refactored code
+  * Started adding tests for refactoring of co module.
 
-Browser versions of tests:
- * http://jsperf.com/generator-delegation/3 - delegator performance
- * http://jsperf.com/generator-iteration-co-vs-bluebird/2 - bluebird vs co
+* 2014-02-24
+  * Improved testing mechanism, introduced concurrency
 
-
-## Results
-
-See [http://www.hiddentao.com/archives/2014/02/14/javascript-generator-delegation-and-coroutine-performance/](http://www.hiddentao.com/archives/2014/02/14/javascript-generator-delegation-and-coroutine-performance/)
-
-
-
-
+* 2014-02-14
+  * Initial release

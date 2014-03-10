@@ -1,19 +1,18 @@
 var Benchmark = require('benchmark'),
   coOriginal = require('./co-original'),
-  coSpeedup = require('./co-speedup');
+  coSpeedup = require('./co-speedup'),
+  tools = require('../tools');
 
-var tools = require('../tools');
+var program = require('commander');
+program
+  .option('-c, --concurrency [num]', 'Concurrency factor [10000]', 10000)
+  .option('-t, --test <name>', 'Test-case to run')
+  .parse(process.argv);
 
+console.log('Test: ' + program.test + ' (concurrency: ' + program.concurrency + ')');
+console.log('---------------------------------------------');
 
-makePromise = function() {
-  return new Promise(function(resolve, reject){
-    setTimeout(resolve, 1);
-  });
-};
-
-var yieldPromise = function*() {
-  yield makePromise;
-}
+var testFn = require('./test-cases/' + program.test + '.js');
 
 
 var suite = new Benchmark.Suite;
@@ -24,20 +23,20 @@ suite.add('co-original', {
   defer: true,
   fn: function(deferred) {
     return tools.run(function(cb) {
-      coOriginal(yieldPromise)(cb);
+      coOriginal(testFn)(cb);
     }, function() {
       deferred.resolve();
-    });
+    }, program.concurrency);
   }
 })
 .add('co-speedup', {
   defer: true,
   fn: function(deferred) {
     return tools.run(function(cb) {
-      coSpeedup(yieldPromise)(cb);
+      coSpeedup(testFn)(cb);
     }, function() {
       deferred.resolve();
-    });
+    }, program.concurrency);
   }
 })
 .on('cycle', function(event) {
@@ -45,6 +44,7 @@ suite.add('co-original', {
 })
 .on('complete', function() {
   console.log('Fastest is ' + this.filter('fastest').pluck('name'));
+  console.log("\n");
 })
 .run({ 'async': true });
 
