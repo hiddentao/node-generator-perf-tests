@@ -1,0 +1,1 @@
+node --harmony test-yield-promise.js
