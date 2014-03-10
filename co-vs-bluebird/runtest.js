@@ -38,8 +38,12 @@ suite.add('Bluebird-Promise.spawn', {
   fn: function(deferred) {
     return tools.run(function(cb) {
       Promise.spawn(gen).then(cb);
-    }, function() {
-      deferred.resolve();
+    }, function(err) {
+      if (err) {
+        deferred.reject(err);
+      } else {
+        deferred.resolve();
+      }
     }, program.concurrency);
   }
 })
@@ -48,8 +52,12 @@ suite.add('Bluebird-Promise.spawn', {
   fn: function(deferred) {
     return tools.run(function(cb) {
       co(gen)(cb);
-    }, function() {
-      deferred.resolve();
+    }, function(err) {
+      if (err) {
+        deferred.reject(err);
+      } else {
+        deferred.resolve();
+      }
     }, program.concurrency);
   }
 })
@@ -58,8 +66,12 @@ suite.add('Bluebird-Promise.spawn', {
   fn: function(deferred) {
     return tools.run(function(cb) {
       bluebirdCoroutine().then(cb);
-    }, function() {
-      deferred.resolve();
+    }, function(err) {
+      if (err) {
+        deferred.reject(err);
+      } else {
+        deferred.resolve();
+      }
     }, program.concurrency);
   }
 })
@@ -68,8 +80,12 @@ suite.add('Bluebird-Promise.spawn', {
   fn: function(deferred) {
     return tools.run(function(cb) {
       coCoroutine(cb);
-    }, function() {
-      deferred.resolve();
+    }, function(err) {
+      if (err) {
+        deferred.reject(err);
+      } else {
+        deferred.resolve();
+      }
     }, program.concurrency);
 
   }

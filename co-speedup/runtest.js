@@ -24,8 +24,12 @@ suite.add('co-original', {
   fn: function(deferred) {
     return tools.run(function(cb) {
       coOriginal(testFn)(cb);
-    }, function() {
-      deferred.resolve();
+    }, function(err) {
+      if (err) {
+        deferred.reject(err);
+      } else {
+        deferred.resolve();
+      }
     }, program.concurrency);
   }
 })
@@ -34,8 +38,12 @@ suite.add('co-original', {
   fn: function(deferred) {
     return tools.run(function(cb) {
       coSpeedup(testFn)(cb);
-    }, function() {
-      deferred.resolve();
+    }, function(err) {
+      if (err) {
+        deferred.reject(err);
+      } else {
+        deferred.resolve();
+      }
     }, program.concurrency);
   }
 })

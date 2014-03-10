@@ -49,8 +49,12 @@ suite.add('Without delegation', {
       }
 
       cb();
-    }, function() {
-      deferred.resolve();
+    }, function(err) {
+      if (err) {
+        deferred.reject(err);
+      } else {
+        deferred.resolve();
+      }
     }, program.concurrency);
   }
 })
@@ -66,8 +70,12 @@ suite.add('Without delegation', {
       }
 
       cb();
-    }, function() {
-      deferred.resolve();
+    }, function(err) {
+      if (err) {
+        deferred.reject(err);
+      } else {
+        deferred.resolve();
+      }
     }, program.concurrency);
   }
 })

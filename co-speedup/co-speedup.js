@@ -1,3 +1,4 @@
+
 /**
  * toString() reference.
  */
@@ -20,11 +21,40 @@ var bind = function(func, receiver) {
 };
 
 
+
+
 /**
- * Expose `co`.
+ * Check if `obj` is a generator function.
+ *
+ * @param {Function} obj
+ * @return {Boolean}
+ * @api private
  */
 
-module.exports = co;
+function isGeneratorFunction(obj) {
+  return 'GeneratorFunction' == obj.constructor.name;
+}
+
+
+/**
+ * Throw `err` in a new stack.
+ *
+ * This is used when co() is invoked
+ * without supplying a callback, which
+ * should only be for demonstrational
+ * purposes.
+ *
+ * @param {Error} err
+ * @api private
+ */
+
+function error(err) {
+  if (!err) return;
+  setImmediate(function(){
+    throw err;
+  });
+}
+
 
 
 
@@ -84,6 +114,8 @@ Coroutine.prototype.next = function(value) {
 }
 
 
+
+
 Coroutine.prototype.throw = function(err) {
   this.continue(
     this.tryCatch(this.gen.throw, this.gen, err)
@@ -115,59 +147,99 @@ Coroutine.prototype.executeThunk = function(thunk) {
       self.throw(err);
     } else {
       self.next.apply(self, slice.call(arguments, 1));
-    }
+    }    
   });
 }
 
 Coroutine.prototype.executeObject = function(obj) {
   var self = this;
 
-  thunk.call(this.ctx, function(err) {
-    if (err) {
-      self.throw(err);
-    } else {
-      self.next.apply(self, slice.call(arguments, 1));
+  var keys = Object.keys(obj);
+  var pending = keys.length;
+  var results = new obj.constructor();
+  var finished;
+
+  if (!pending) {
+    setImmediate(function(){
+      self.next(results);
+    });
+    return;
+  }
+
+
+
+
+    for (var i = 0; i < keys.length; i++) {
+      run(obj[keys[i]], keys[i]);
     }
-  });
+
+    function run(fn, key) {
+      if (finished) return;
+      try {
+        fn = toThunk(fn, ctx);
+
+        if ('function' != typeof fn) {
+          results[key] = fn;
+          return --pending || done(null, results);
+        }
+
+        fn.call(ctx, function(err, res){
+          if (finished) return;
+
+          if (err) {
+            finished = true;
+            return done(err);
+          }
+
+          results[key] = res;
+          --pending || done(null, results);
+        });
+      } catch (err) {
+        finished = true;
+        done(err);
+      }
+    }
+
 }
 
 Coroutine.prototype.execute = function(value) {
   var self = this;
 
   try {
-    if (isPromise(value)) {
-      this.executePromise(value);
-      return;
-    }     
 
-    if (isGenerator(value)) {
-      this.executeGenerator(value);
-      return;
-    }     
+    if (value) {
+      // promise
+      if ('function' === typeof value.then) {
+        this.executePromise(value);
+        return;
+      } 
+      // generator
+      else if ('function' === typeof value.next && 'function' == typeof value.throw) {
+        this.executeGenerator(value);
+        return;
+      }
+      // is a function
+      else if ('function' === typeof value) {
+        // generator function
+        if (isGeneratorFunction(value)) {
+          this.executeGeneratorFunction(value);
+          return;
+        } 
+        // assume it's a thunk
+        else {
+          this.executeThunk(value);
+          return;
+        }
+      } 
+    }
 
-    if (isGeneratorFunction(value)) {
-      this.executeGeneratorFunction(value);
-      return;
-    }     
-
-    if ('function' === typeof value) { /* assume it is a thunk */
-      this.executeThunk(value);
-      return;
-    }     
-
-    if ('object' === typeof value) { /* assume it is an array or object of yieldables */
-      this.executeObject(value);
-      return;
-    }     
+    this.error(new Error('yield a function, promise, generator, array, or object'));      
 
   } catch (err) {
     setImmediate(function(){
       self.throw(err);
     });    
-    return;
   }
-
-  this.error(new Error('yield a function, promise, generator, array, or object'));  
 }
 
 
@@ -229,168 +301,6 @@ function co(fn) {
 
 
 
-/**
- * Coroutinenvert `obj` into a normalized thunk.
- *
- * @param {Mixed} obj
- * @param {Mixed} ctx
- * @return {Function}
- * @api private
- */
 
-function toThunk(obj, ctx) {
-  // if (Array.isArray(obj)) {
-  //   return objectToThunk.call(ctx, obj);
-  // }
+module.exports = co;
 
-  if (isGeneratorFunction(obj)) {
-    return co(obj.call(ctx));
-  }
-
-  if (isGenerator(obj)) {
-    return co(obj);
-  }
-
-  if (isPromise(obj)) {
-    return promiseToThunk(obj);
-  }
-
-  if ('function' == typeof obj) {
-    return obj;
-  }
-
-  // if (obj && 'object' == typeof obj) {
-  //   return objectToThunk.call(ctx, obj);
-  // }
-
-  return obj;
-}
-
-/**
- * Coroutinenvert an object of yieldables to a thunk.
- *
- * @param {Object} obj
- * @return {Function}
- * @api private
- */
-
-function objectToThunk(obj){
-  var ctx = this;
-
-  return function(done){
-    var keys = Object.keys(obj);
-    var pending = keys.length;
-    var results = new obj.constructor();
-    var finished;
-
-    if (!pending) {
-      setImmediate(function(){
-        done(null, results)
-      });
-      return;
-    }
-
-    for (var i = 0; i < keys.length; i++) {
-      run(obj[keys[i]], keys[i]);
-    }
-
-    function run(fn, key) {
-      if (finished) return;
-      try {
-        fn = toThunk(fn, ctx);
-
-        if ('function' != typeof fn) {
-          results[key] = fn;
-          return --pending || done(null, results);
-        }
-
-        fn.call(ctx, function(err, res){
-          if (finished) return;
-
-          if (err) {
-            finished = true;
-            return done(err);
-          }
-
-          results[key] = res;
-          --pending || done(null, results);
-        });
-      } catch (err) {
-        finished = true;
-        done(err);
-      }
-    }
-  }
-}
-
-/**
- * Coroutinenvert `promise` to a thunk.
- *
- * @param {Object} promise
- * @return {Function}
- * @api private
- */
-
-function promiseToThunk(promise) {
-  return function(fn){
-    promise.then(function(res) {
-      fn(null, res);
-    }, fn);
-  }
-}
-
-/**
- * Check if `obj` is a promise.
- *
- * @param {Object} obj
- * @return {Boolean}
- * @api private
- */
-
-function isPromise(obj) {
-  return obj && 'function' == typeof obj.then;
-}
-
-/**
- * Check if `obj` is a generator.
- *
- * @param {Mixed} obj
- * @return {Boolean}
- * @api private
- */
-
-function isGenerator(obj) {
-  return obj && 'function' == typeof obj.next && 'function' == typeof obj.throw;
-}
-
-/**
- * Check if `obj` is a generator function.
- *
- * @param {Mixed} obj
- * @return {Boolean}
- * @api private
- */
-
-function isGeneratorFunction(obj) {
-  return obj && obj.constructor && 'GeneratorFunction' == obj.constructor.name;
-}
-
-
-/**
- * Throw `err` in a new stack.
- *
- * This is used when co() is invoked
- * without supplying a callback, which
- * should only be for demonstrational
- * purposes.
- *
- * @param {Error} err
- * @api private
- */
-
-function error(err) {
-  if (!err) return;
-  setImmediate(function(){
-    throw err;
-  });
-}
