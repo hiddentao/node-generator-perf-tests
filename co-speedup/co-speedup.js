@@ -57,38 +57,17 @@ function error(err) {
 
 
 
-
 var Coroutine = function(generator) {
   this.gen = generator;
-  this.nextB = bind(this.next, this);
-  this.throwB = bind(this.throw, this);
+  this.promiseThenB = bind(this.promiseThen, this);
+  this.promiseCatchB = bind(this.promiseCatch, this);
+  this.handleAsyncResultB = bind(this.handleAsyncResult, this);
 }
 
-Coroutine.prototype.run = function(ctx, done, errorCb) {
+Coroutine.prototype.run = function(ctx, done) {
   this.ctx = ctx;
   this.done = done;
-  this.errorCb = errorCb;
-  this.next();
-}
-
-
-
-Coroutine.prototype.success = function(result) {
-  if (!this.errorCb) {
-    this.done(null, result);
-  } else {
-    this.done(result);
-  }
-}
-
-
-
-Coroutine.prototype.error = function(err) {
-  if (!this.errorCb) {
-    this.done(err);
-  } else {
-    this.errorCb(err);
-  }
+  this.promiseThen();
 }
 
 
@@ -102,18 +81,30 @@ Coroutine.prototype.tryCatch = function(func, receiver, arg) {
 }
 
 
-Coroutine.prototype.next = function(value) {
-  // multiple values as result?
-  if (1 < arguments.length) {
-    value = slice.call(arguments, 1);
-  }
-
+Coroutine.prototype.promiseThen = function(value) {
   this.continue(
     this.tryCatch(this.gen.next, this.gen, value)
   );
 }
 
 
+Coroutine.prototype.promiseCatch = function(err) {
+  this.continue(
+    this.tryCatch(this.gen.throw, this.gen, err)
+  );
+}
+
+Coroutine.prototype.handleAsyncResult = function(err, value) {
+  if (err) {
+    this.promiseCatch(err);
+  } else {
+    // multiple values as result?
+    if (1 < arguments.length) {
+      value = slice.call(arguments, 1);
+    }
+    this.promiseThen(value);    
+  }
+}
 
 
 Coroutine.prototype.throw = function(err) {
@@ -122,89 +113,40 @@ Coroutine.prototype.throw = function(err) {
   );
 }
 
-
-
 Coroutine.prototype.executePromise = function(promise) {
-  promise.then(this.nextB, this.throwB);
+  promise.then(this.promiseThenB, this.promiseCatchB);
 }
 
 
 Coroutine.prototype.executeGenerator = function(generator) {
-  new Coroutine(generator).run(this.ctx, this.nextB, this.throwB);
+  new Coroutine(generator).run(this.ctx, this.handleAsyncResultB);
 }
 
 
 Coroutine.prototype.executeGeneratorFunction = function(generatorFunction) {
-  new Coroutine(generatorFunction.call(this.ctx)).run(this.ctx, this.nextB, this.throwB);
+  new Coroutine(generatorFunction.call(this.ctx)).run(this.ctx, this.handleAsyncResultB);
 }
 
-
 Coroutine.prototype.executeThunk = function(thunk) {
-  var self = this;
-
-  thunk.call(this.ctx, function(err) {
-    if (err) {
-      self.throw(err);
-    } else {
-      self.next.apply(self, slice.call(arguments, 1));
-    }    
-  });
+  thunk.call(this.ctx, this.handleAsyncResultB);
 }
 
 Coroutine.prototype.executeObject = function(obj) {
-  var self = this;
+  /*
+  For this one it's clear that we will need to split out the .execute..() methods into another more re-usable class (e.g. Exec) which when 
+  given a list of yieldables and non-yieldables will execute them until they all complete and then return the final result.
 
-  var keys = Object.keys(obj);
-  var pending = keys.length;
-  var results = new obj.constructor();
-  var finished;
+  Since such a class will contain many similar methods to this class (Coroutine) this one should probably inherit from it and then override 
+  where necessary. Specifically, Coroutine should override the .execute() method such that non-yieldable values throw an error (where as 
+  in Exec they would simply get returned back to the caller).
+   */
 
-  if (!pending) {
-    setImmediate(function(){
-      self.next(results);
-    });
-    return;
-  }
-
-
-
-
-    for (var i = 0; i < keys.length; i++) {
-      run(obj[keys[i]], keys[i]);
-    }
-
-    function run(fn, key) {
-      if (finished) return;
-      try {
-        fn = toThunk(fn, ctx);
-
-        if ('function' != typeof fn) {
-          results[key] = fn;
-          return --pending || done(null, results);
-        }
-
-        fn.call(ctx, function(err, res){
-          if (finished) return;
-
-          if (err) {
-            finished = true;
-            return done(err);
-          }
-
-          results[key] = res;
-          --pending || done(null, results);
-        });
-      } catch (err) {
-        finished = true;
-        done(err);
-      }
-    }
+  this.handleAsyncResultB(new Error('Not yet implemented'));
 
 }
 
-Coroutine.prototype.execute = function(value) {
-  var self = this;
 
+Coroutine.prototype.execute = function(value) {
   try {
 
     if (value) {
@@ -230,12 +172,15 @@ Coroutine.prototype.execute = function(value) {
           this.executeThunk(value);
           return;
         }
+      } else if ('object' === typeof value) {
+        this.executeObject(value);
       } 
     }
 
-    this.error(new Error('yield a function, promise, generator, array, or object'));      
+    this.done(new Error('yield a function, promise, generator, array, or object'));      
 
   } catch (err) {
+    var self = this;
     setImmediate(function(){
       self.throw(err);
     });    
@@ -245,17 +190,15 @@ Coroutine.prototype.execute = function(value) {
 
 
 Coroutine.prototype.continue = function(res) {
-  var self = this;
-
   if (res instanceof Error) {
-    self.error(res);
+    this.done(res);
     return;
   }
 
   if (res.done) {
-    self.success(res.value);
+    this.done(null, res.value);
   } else {
-    self.execute(res.value);
+    this.execute(res.value);
   }
 }
 
