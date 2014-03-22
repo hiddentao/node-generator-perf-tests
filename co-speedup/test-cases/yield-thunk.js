@@ -4,9 +4,11 @@ var makeThunk = function() {
   }
 }
 
+generatorFunction = function*() {
+  yield makePromise();
+};
+
 module.exports = function*() {
   yield makeThunk();
   yield makeThunk();
 };
-
-

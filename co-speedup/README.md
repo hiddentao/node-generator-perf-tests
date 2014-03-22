@@ -1,6 +1,6 @@
 ## Performance: Co speedup improvements
 
-This tests **co-original** ([co](https://github.com/visionmedia/co) v3.0.4) against **co-speedup** (a refactor of v3.0.4). **co-speedup** attempts to use some of the VM-targeted performance optimisations found in [bluebird](https://github.com/petkaantonov/bluebird) to speed up co.
+This tests **co-original** ([co](https://github.com/visionmedia/co) v3.0.4) against **co-classes** (a refactor of v3.0.4). **co-classes** attempts to use some of the VM-targeted performance optimisations found in [bluebird](https://github.com/petkaantonov/bluebird) to speed up co.
 
 * Promises
 
@@ -27,33 +27,40 @@ All tests are run with a default concurrency factor of 10000 in order to stress 
 
 Test: yield-promise (concurrency: 10000)
 ---------------------------------------------
-co-original x 5.55 ops/sec ±9.15% (31 runs sampled)
-co-speedup x 11.38 ops/sec ±2.72% (58 runs sampled)
-Fastest is co-speedup
+co-original x 6.73 ops/sec ±4.71% (37 runs sampled)
+co-classes x 10.99 ops/sec ±4.46% (55 runs sampled)
+Fastest is co-classes
 
 
 Test: yield-generator-function (concurrency: 10000)
 ---------------------------------------------
-co-original x 4.72 ops/sec ±2.84% (16 runs sampled)
-co-speedup x 4.87 ops/sec ±2.82% (17 runs sampled)
-Fastest is co-speedup,co-original
+co-original x 4.72 ops/sec ±4.40% (16 runs sampled)
+co-classes x 4.90 ops/sec ±2.99% (16 runs sampled)
+Fastest is co-classes,co-original
 
 
 Test: yield-generator (concurrency: 10000)
 ---------------------------------------------
-co-original x 4.81 ops/sec ±3.09% (17 runs sampled)
-co-speedup x 4.94 ops/sec ±3.53% (17 runs sampled)
-Fastest is co-speedup,co-original
+co-original x 4.89 ops/sec ±2.75% (17 runs sampled)
+co-classes x 5.14 ops/sec ±3.19% (17 runs sampled)
+Fastest is co-classes,co-original
 
 
 Test: yield-thunk (concurrency: 10000)
 ---------------------------------------------
-co-original x 10.93 ops/sec ±3.00% (56 runs sampled)
-co-speedup x 13.70 ops/sec ±4.39% (68 runs sampled)
-Fastest is co-speedup
+co-original x 11.28 ops/sec ±2.98% (57 runs sampled)
+co-classes x 13.81 ops/sec ±1.83% (67 runs sampled)
+Fastest is co-classes
+
+
+Test: yield-object (concurrency: 10000)
+---------------------------------------------
+co-original x 5.41 ops/sec ±3.41% (18 runs sampled)
+co-classes x 5.66 ops/sec ±2.45% (18 runs sampled)
+Fastest is co-classes
 ```
 
-Overall **co-speedup** is faster, and especially so when yielding thunks and promises.
+Overall **co-classes** is faster, and especially so when yielding thunks and promises.
 
 ## Learnings
 
@@ -64,7 +71,6 @@ Overall **co-speedup** is faster, and especially so when yielding thunks and pro
 
 ## TODO
 
-* Ability to yielding a list of yieldables (see `objectToThunk()` in co-original) 
 * Use V8 flags to determine good/bad performance points in the code
 * Compare memory usage of both versions
 

@@ -1,6 +1,6 @@
 var Benchmark = require('benchmark'),
   coOriginal = require('./co-original'),
-  coSpeedup = require('./co-speedup'),
+  coSpeedup = require('./co-classes'),
   tools = require('../tools');
 
 var program = require('commander');
@@ -33,7 +33,7 @@ suite.add('co-original', {
     }, program.concurrency);
   }
 })
-.add('co-speedup', {
+.add('co-classes', {
   defer: true,
   fn: function(deferred) {
     return tools.run(function(cb) {
