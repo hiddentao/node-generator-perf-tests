@@ -15,8 +15,8 @@ var slice = Array.prototype.slice;
 
 /**
  * Bind given function to given receiver.
- * @param  {Function} func     
- * @param  {Object} receiver 
+ * @param  {Function} func
+ * @param  {Object} receiver
  * @return {Function}
  */
 var bind = function(func, receiver) {
@@ -35,10 +35,26 @@ var bind = function(func, receiver) {
  * @return {Boolean}
  * @api private
  */
-
 function isGeneratorFunction(obj) {
   return 'GeneratorFunction' == obj.constructor.name;
 }
+
+
+
+/**
+ * Check if `obj` is a plain javascript object or array.
+ *
+ * @param {Function} obj
+ * @return {Boolean}
+ * @api private
+ */
+function isPlainObjectOrArray(obj) {
+  return 'object' === typeof obj &&
+    (obj.constructor.prototype === Array.prototype ||
+        obj.constructor.prototype.hasOwnProperty('isPrototypeOf')
+    );
+}
+
 
 
 /**
@@ -63,11 +79,11 @@ function error(err) {
 
 
 
-// ------------------------------------------------------------------------------------------------ //
-// 
+// ------------------------------------------------------------------------- //
+//
 // The main class
-// 
-// ------------------------------------------------------------------------------------------------ //
+//
+// ------------------------------------------------------------------------- //
 
 
 
@@ -78,15 +94,51 @@ function error(err) {
  */
 var Coroutine = function(generator) {
   this.gen = generator;
-  this.promiseThenB = bind(this.promiseThen, this);
-  this.promiseCatchB = bind(this.promiseCatch, this);
   this.handleAsyncResultB = bind(this.handleAsyncResult, this);
+  this.handleAsyncErrorB = bind(this.handleAsyncError, this);
+  this.handleThunkResultB = bind(this.handleThunkResult, this);
 }
 
-Coroutine.prototype.run = function(ctx, done) {
+/**
+ * @param {Function} successCallback Used internally for performance reasons
+ */
+Coroutine.prototype.run = function(ctx, callback, successCallback) {
   this.ctx = ctx;
-  this.done = done;
-  this.promiseThen();
+
+  this.callback = callback;
+  this.successCallback = successCallback;
+
+  this.finished = false;
+  this.handleAsyncResult();
+}
+
+
+Coroutine.prototype.done = function(err, returnValue) {
+  this.finished = true;
+
+  try {
+    if (!err && this.successCallback) {
+      this.successCallback(returnValue);
+    } else {
+      this.callback(err, returnValue);
+    }
+  } catch (e) {
+    error(e);
+  }
+}
+
+
+Coroutine.prototype.continue = function(res) {
+  if (res instanceof Error) {
+    this.done(res);
+    return;
+  }
+
+  if (!res.done) {
+    this.execute(res.value);
+  } else {
+    this.done(null, res.value);
+  }
 }
 
 
@@ -96,32 +148,6 @@ Coroutine.prototype.tryCatch = function(func, receiver, arg) {
     return func.call(receiver, arg);
   } catch (err) {
     return err;
-  }  
-}
-
-
-Coroutine.prototype.promiseThen = function(value) {
-  this.continue(
-    this.tryCatch(this.gen.next, this.gen, value)
-  );
-}
-
-
-Coroutine.prototype.promiseCatch = function(err) {
-  this.continue(
-    this.tryCatch(this.gen.throw, this.gen, err)
-  );
-}
-
-Coroutine.prototype.handleAsyncResult = function(err, value) {
-  if (err) {
-    this.promiseCatch(err);
-  } else {
-    // multiple values as result?
-    if (1 < arguments.length) {
-      value = slice.call(arguments, 1);
-    }
-    this.promiseThen(value);    
   }
 }
 
@@ -132,23 +158,48 @@ Coroutine.prototype.throw = function(err) {
   );
 }
 
-Coroutine.prototype.executePromise = function(promise) {
-  promise.then(this.promiseThenB, this.promiseCatchB);
+
+Coroutine.prototype.handleAsyncResult = function(value) {
+  this.continue(
+    this.tryCatch(this.gen.next, this.gen, value)
+  );
 }
 
+
+Coroutine.prototype.handleAsyncError = function(err) {
+  this.continue(
+    this.tryCatch(this.gen.throw, this.gen, err)
+  );
+}
+
+
+Coroutine.prototype.executePromise = function(promise) {
+  promise.then(this.handleAsyncResultB, this.handleAsyncErrorB);
+}
 
 Coroutine.prototype.executeGenerator = function(generator) {
-  new Coroutine(generator).run(this.ctx, this.handleAsyncResultB);
+  new Coroutine(generator).run(
+    this.ctx, this.handleAsyncErrorB, this.handleAsyncResultB);
 }
-
-
-Coroutine.prototype.executeThunk = function(thunk) {
-  thunk.call(this.ctx, this.handleAsyncResultB);
-}
-
 
 Coroutine.prototype.executeObject = function(obj) {
-  new CoGroup(obj).run(this.ctx, this.handleAsyncResultB);
+  new CoGroup(obj).run(this.ctx,
+    this.handleAsyncErrorB, this.handleAsyncResultB);
+}
+
+Coroutine.prototype.executeThunk = function(thunk) {
+  thunk.call(this.ctx, this.handleThunkResultB);
+}
+Coroutine.prototype.handleThunkResult = function(err, value1) {
+  if (err) {
+    this.handleAsyncError(err);
+  } else {
+    if (2 < arguments.length) {
+      this.handleAsyncResult(slice.call(arguments, 1));
+    } else {
+      this.handleAsyncResult(value1);
+    }
+  }
 }
 
 
@@ -161,7 +212,7 @@ Coroutine.prototype.execute = function(value) {
       if ('function' === typeof value.then) {
         this.executePromise(value);
         return;
-      } 
+      }
       // generator
       else if ('function' === typeof value.next && 'function' == typeof value.throw) {
         this.executeGenerator(value);
@@ -173,54 +224,45 @@ Coroutine.prototype.execute = function(value) {
         if (isGeneratorFunction(value)) {
           this.executeGenerator(value.call(this.ctx));
           return;
-        } 
+        }
         // assume it's a thunk
         else {
           this.executeThunk(value);
           return;
         }
-      } else if ('object' === typeof value) {
+      } else if (isPlainObjectOrArray(value)) {
         this.executeObject(value);
+        return;
       }
     }
 
-    this.done(new Error('yield a function, promise, generator, array, or object'));      
+    throw new Error('yield a function, promise, generator, array, or object');
 
   } catch (err) {
     var self = this;
     setImmediate(function(){
+      if (self.finished) return;
+
       self.throw(err);
-    });    
-  }
-}
-
-
-
-Coroutine.prototype.continue = function(res) {
-  if (res instanceof Error) {
-    this.done(res);
-    return;
-  }
-
-  if (res.done) {
-    this.done(null, res.value);
-  } else {
-    this.execute(res.value);
+    });
   }
 }
 
 
 
 
-// ------------------------------------------------------------------------------------------------ //
-// 
+
+
+// ------------------------------------------------------------------------- //
+//
 // Handle a collection of yieldables in parallel
-// 
-// This class has many similar methods to Coroutine, yet they are subtly different as in this 
-// one we need to know which key each result is associated with, which requires the use of 
-// closures, which slows things down.
-// 
-// ------------------------------------------------------------------------------------------------ //
+//
+// This class has many similar methods to Coroutine, yet they are subtly
+// different as in this one we need to know which key each result is
+// associated with, which requires the use of closures, which slows
+// things down.
+//
+// ------------------------------------------------------------------------- //
 
 
 
@@ -236,21 +278,28 @@ var CoGroup = function(yieldables) {
 
 CoGroup.prototype.done = function(err) {
   this.finished = true;
-  this._done(err, this.results);
+
+  if (!err && this.successCallback) {
+    this.successCallback(this.results);
+  } else {
+    this.callback(err, this.results);
+  }
 }
 
 
-CoGroup.prototype.run = function(ctx, done) {
+CoGroup.prototype.run = function(ctx, callback, successCallback) {
   this.ctx = ctx;
-  this._done = done;
+  this.callback = callback;
+  this.successCallback = successCallback;
 
   this.finished = false;
-  this.results = new this.yieldables.constructor(); 
+  this.results = new this.yieldables.constructor();
 
   var keys = Object.keys(this.yieldables);
 
   if (!keys.length) {
     var self = this;
+
     setImmediate(function(){
       self.done();
     });
@@ -261,6 +310,7 @@ CoGroup.prototype.run = function(ctx, done) {
 
   for (var i = 0; i < keys.length; i++) {
     if (this.finished) return;
+
     this.execute(keys[i], this.yieldables[keys[i]]);
   }
 }
@@ -325,26 +375,22 @@ CoGroup.prototype.execute = function(key, value) {
     // promise
     if ('function' === typeof value.then) {
       this.executePromise(key, value);
-      return;
-    } 
+    }
     // generator
     else if ('function' === typeof value.next && 'function' == typeof value.throw) {
       this.executeGenerator(key, value);
-      return;
     }
     // is a function
     else if ('function' === typeof value) {
       // generator function
       if (isGeneratorFunction(value)) {
         this.executeGenerator(key, value.call(this.ctx));
-        return;
-      } 
+      }
       // assume it's a thunk
       else {
         this.executeThunk(key, value);
-        return;
       }
-    } else if ('object' === typeof value) {
+    } else if (isPlainObjectOrArray(value)) {
       this.executeObject(key, value);
     } else {
       this.setValue(key, value);
@@ -353,19 +399,21 @@ CoGroup.prototype.execute = function(key, value) {
   } catch (err) {
     var self = this;
     setImmediate(function(){
+      if (self.finished) return;
+
       self.done(err);
-    });    
+    });
   }
 }
 
 
 
 
-// ------------------------------------------------------------------------------------------------ //
-// 
+// ------------------------------------------------------------------------- //
+//
 // The main entry point
-// 
-// ------------------------------------------------------------------------------------------------ //
+//
+// ------------------------------------------------------------------------- //
 
 
 
@@ -391,17 +439,23 @@ module.exports = function(fn) {
     // we only need to parse the arguments
     // if gen is a generator function.
     if (isGenFun) {
-      if (1 < arguments.length) {
-        var args = slice.call(arguments), len = args.length;
-        var hasCallback = len && 'function' == typeof args[len - 1];
-        done = hasCallback ? args.pop() : null;
+      var len = arguments.length;
+
+      if (1 < len) {
+        var args = slice.call(arguments);
+        var hasCallback = 'function' == typeof args[len - 1];
+        done = hasCallback ? args.pop() : error;
         gen = fn.apply(ctx, args);
       } else {
-        gen = fn.apply(ctx);
+        if (done && 'function' === typeof done) {
+          gen = fn.call(ctx);
+        } else {
+          gen = fn.call(ctx, done);  // done is probably a parameter
+          done = error;
+        }
       }
     }
 
     new Coroutine(gen).run(ctx, done || error);
   }
 }
-

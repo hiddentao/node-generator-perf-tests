@@ -1,5 +1,5 @@
 var Benchmark = require('benchmark'),
-  coOriginal = require('./co-original'),
+  coOriginal = require('../node_modules/co'),
   coSpeedup = require('./co-classes'),
   tools = require('../tools');
 
@@ -55,4 +55,3 @@ suite.add('co-original', {
   console.log("\n");
 })
 .run({ 'async': true });
-
