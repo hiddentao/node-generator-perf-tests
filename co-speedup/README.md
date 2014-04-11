@@ -72,5 +72,5 @@ Overall **co-classes** is faster, and especially so when yielding thunks and pro
 
 ## TODO
 
-* Use V8 flags to determine good/bad performance points in the code
+* Use V8 flags to determine good/bad performance points in the code, see https://github.com/petkaantonov/bluebird/wiki/Optimization-killers
 * Compare memory usage of both versions
